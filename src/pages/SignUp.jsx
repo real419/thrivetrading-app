@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Lock, Mail, User, TrendingUp } from 'lucide-react';
 
-// Use environment variable for production deployment with live Render fallback
-const API_URL = import.meta.env.VITE_API_URL || 'https://thrivetrading-app.onrender.com';
+// Hardcoded production API URL to prevent Netlify build-time environment variable issues on mobile
+const API_URL = 'https://thrivetrading-app.onrender.com';
 
 export default function SignUp() {
   const [name, setName] = useState('');
