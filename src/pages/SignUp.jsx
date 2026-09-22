@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Lock, Mail, User, TrendingUp } from 'lucide-react';
 
-// Use environment variable for production deployment with localhost fallback
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// Use environment variable for production deployment with live Render fallback
+const API_URL = import.meta.env.VITE_API_URL || 'https://thrivetrading-app.onrender.com';
 
 export default function SignUp() {
   const [name, setName] = useState('');
@@ -34,8 +34,8 @@ export default function SignUp() {
       }
 
       // Success! Account is created as 'pending'. 
-      alert(data.message); // "Registration successful! Please wait for administrator approval..."
-      navigate('/login'); // Send them to login so they can log in *after* approval
+      alert(data.message); 
+      navigate('/login'); 
     } catch (err) {
       setError(err.message);
     } finally {

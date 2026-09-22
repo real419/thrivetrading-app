@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Lock, Mail, TrendingUp } from 'lucide-react';
 
-// Use environment variable for production deployment with localhost fallback
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// Use environment variable with live Render fallback for production deployment
+const API_URL = import.meta.env.VITE_API_URL || 'https://thrivetrading-app.onrender.com';
 
 export default function Login() {
   const [email, setEmail] = useState('');
