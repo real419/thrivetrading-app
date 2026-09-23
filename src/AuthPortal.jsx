@@ -1,14 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-// Hardcoded production API URL to prevent Netlify/Vercel and mobile localhost connection failures
 const API_URL = 'https://thrivetrading-app.onrender.com';
 
 export default function AuthPortal({ initialMode = 'login', onLoginSuccess, onBackToHome }) {
   const [isLogin, setIsLogin] = useState(initialMode === 'login');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Wake up Render backend silently in the background when page loads
+  useEffect(() => {
+    fetch(`${API_URL}/api/status`).catch(() => {});
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -16,18 +21,29 @@ export default function AuthPortal({ initialMode = 'login', onLoginSuccess, onBa
     setLoading(true);
 
     try {
-      // Connects to your live Express backend endpoints: /api/auth/login or /api/auth/signup
       const endpoint = isLogin ? `${API_URL}/api/auth/login` : `${API_URL}/api/auth/signup`;
+      
+      // Include name if signing up, otherwise just email and password
+      const payload = isLogin ? { email, password } : { name, email, password };
+
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Authentication failed');
 
-      const role = data.role || (email.toLowerCase().includes('admin') ? 'admin' : 'client');
+      if (!isLogin) {
+        // If signup was successful, automatically switch to login or notify user
+        alert(data.message || 'Registration successful! Please sign in.');
+        setIsLogin(true);
+        setLoading(false);
+        return;
+      }
+
+      const role = data.user?.role || (email.toLowerCase().includes('admin') ? 'admin' : 'client');
       onLoginSuccess(role, data.user || { email });
     } catch (err) {
       setError(err.message || 'Unable to connect to server. Check if backend is running.');
@@ -47,6 +63,12 @@ export default function AuthPortal({ initialMode = 'login', onLoginSuccess, onBa
         {error && <div style={{ backgroundColor: 'rgba(248, 113, 113, 0.1)', border: '1px solid #F87171', color: '#F87171', padding: '12px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px' }}>{error}</div>}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {!isLogin && (
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#E2E8F0', marginBottom: '6px' }}>Full Name</label>
+              <input type="text" required={!isLogin} value={name} onChange={(e) => setName(e.target.value)} placeholder="John Doe" style={{ width: '100%', padding: '12px', borderRadius: '8px', backgroundColor: '#1E293B', border: '1px solid rgba(59, 130, 246, 0.4)', color: '#FFF', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+            </div>
+          )}
           <div>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#E2E8F0', marginBottom: '6px' }}>Email Address</label>
             <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" style={{ width: '100%', padding: '12px', borderRadius: '8px', backgroundColor: '#1E293B', border: '1px solid rgba(59, 130, 246, 0.4)', color: '#FFF', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
