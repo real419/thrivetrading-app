@@ -11,6 +11,7 @@ app.use(cors({
   origin: [
     'https://thrivetradingllc.com',
     'https://www.thrivetradingllc.com',
+    'https://spectacular-moonbeam-708ac2.netlify.app',
     'http://localhost:5173',
     'http://localhost:5175',
     'http://localhost:3000'
