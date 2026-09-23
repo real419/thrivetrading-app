@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 
-// Configure your backend server base URL here
-const API_URL = 'https://thrivetrading-app.onrender.com';
+// Automatically use localhost when testing locally, or Render in production
+const API_URL = window.location.hostname === 'localhost'
+  ? 'http://localhost:5000'
+  : 'https://thrivetrading-app.onrender.com';
 
 // ==========================================
 // AUTH PORTAL SUB-COMPONENT
@@ -133,7 +135,8 @@ export default function App() {
   const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
   const [submitted, setSubmitted] = useState(false);
 
-  const logoImage = "logo.png";
+  // Fallback safely if logo.png is missing from public folder
+  const logoImage = "";
 
   // Fetch initial data on load or when user logs in
   useEffect(() => {
@@ -293,7 +296,11 @@ export default function App() {
         {/* TOP NAVBAR */}
         <header style={{ backgroundColor: '#111827', borderBottom: '1px solid rgba(59, 130, 246, 0.2)', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => setCurrentView('landing')}>
-            <img src={logoImage} alt="Logo" style={{ height: '32px', width: '32px', objectFit: 'contain', borderRadius: '6px' }} onError={(e)=>{e.target.style.display='none'}} />
+            {logoImage ? (
+              <img src={logoImage} alt="Logo" style={{ height: '32px', width: '32px', objectFit: 'contain', borderRadius: '6px' }} onError={(e)=>{e.target.style.display='none'}} />
+            ) : (
+              <div style={{ width: '32px', height: '32px', backgroundColor: '#2563EB', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: '#FFF' }}>T</div>
+            )}
             <span style={{ fontSize: '18px', fontWeight: 900, color: '#FFFFFF' }}>
               Thrivetrading<span style={{ color: '#38BDF8' }}>llc</span>
             </span>
@@ -622,7 +629,11 @@ export default function App() {
         <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
-            <img src={logoImage} alt="Company Logo" style={{ height: '40px', width: '40px', objectFit: 'contain', borderRadius: '10px' }} onError={(e)=>{e.target.style.display='none'}} />
+            {logoImage ? (
+              <img src={logoImage} alt="Company Logo" style={{ height: '40px', width: '40px', objectFit: 'contain', borderRadius: '10px' }} onError={(e)=>{e.target.style.display='none'}} />
+            ) : (
+              <div style={{ width: '40px', height: '40px', backgroundColor: '#2563EB', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: '#FFF', fontSize: '20px' }}>T</div>
+            )}
             <span style={{ fontSize: '22px', fontWeight: 900, letterSpacing: '-0.025em', color: '#FFFFFF' }}>
               Thrivetrading<span style={{ color: '#38BDF8' }}>llc</span>
             </span>

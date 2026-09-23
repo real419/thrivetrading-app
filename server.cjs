@@ -29,15 +29,10 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   phone: { type: String, default: '' },
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
-  status: { type: String, default: 'pending' }, // 'pending' / 'approved' / 'rejected'
-  balance: { type: Number, default: 0 },
-  activeTrades: { type: Number, default: 0 },
-  totalProfit: { type: Number, default: 0 },
-  portfolio: {
-    equity: { type: Number, default: 0 },
-    margin: { type: Number, default: 0 },
-    pnl: { type: Number, default: 0 }
-  },
+  status: { type: String, default: 'Pending' }, // 'Pending' / 'Approved' / 'Rejected'
+  initialDeposit: { type: String, default: '$0.00' },
+  interest: { type: String, default: '$0.00' },
+  total: { type: String, default: '$0.00' },
   transactions: [{
     id: String,
     type: String,
@@ -49,6 +44,20 @@ const userSchema = new mongoose.Schema({
 });
 
 const User = mongoose.model('User', userSchema);
+
+// --- Position / Trade Schema & Model ---
+const positionSchema = new mongoose.Schema({
+  email: { type: String, required: true },
+  asset: { type: String, required: true },
+  type: { type: String, required: true }, // BUY / SELL
+  entry: { type: String, required: true },
+  amount: { type: String, required: true },
+  pnl: { type: String, default: '+$0.00' },
+  status: { type: String, default: 'Open' },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const Position = mongoose.model('Position', positionSchema);
 
 // --- Contact Schema & Model ---
 const contactSchema = new mongoose.Schema({
@@ -72,11 +81,10 @@ async function createDefaultAdmin() {
         email: adminEmail,
         password: 'AdminPassword123!',
         role: 'admin',
-        status: 'approved',
-        balance: 50000,
-        activeTrades: 5,
-        totalProfit: 4250,
-        portfolio: { equity: 50000, margin: 5000, pnl: 4250 }
+        status: 'Approved',
+        initialDeposit: '$50,000',
+        interest: '$4,250',
+        total: '$54,250'
       });
       await adminUser.save();
       console.log('✅ Default admin account created successfully!');
@@ -112,7 +120,7 @@ app.post('/api/contact', async (req, res) => {
 // --- 1. USER SIGN UP ---
 app.post('/api/auth/signup', async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, phone, email, password } = req.body;
     
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Name, email, and password are required.' });
@@ -125,14 +133,14 @@ app.post('/api/auth/signup', async (req, res) => {
 
     const newUser = new User({
       name,
+      phone: phone || '',
       email,
       password,
       role: 'user',
-      status: 'pending',
-      balance: 1000, // Starting demo balance
-      activeTrades: 0,
-      totalProfit: 0,
-      portfolio: { equity: 1000, margin: 0, pnl: 0 },
+      status: 'Pending',
+      initialDeposit: '$1,000.00',
+      interest: '$0.00',
+      total: '$1,000.00',
       transactions: []
     });
 
@@ -154,7 +162,7 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password.' });
     }
 
-    if (user.role !== 'admin' && user.status !== 'approved') {
+    if (user.role !== 'admin' && user.status !== 'Approved') {
       return res.status(403).json({ message: 'Your account is currently pending administrator approval.' });
     }
 
@@ -171,113 +179,98 @@ app.post('/api/auth/login', async (req, res) => {
 // --- 3. ADMIN: GET ALL USERS ---
 app.get('/api/admin/users', async (req, res) => {
   try {
-    const users = await User.find({ role: 'user' }).select('-password');
-    res.json({ users });
+    const users = await User.find({ role: { $ne: 'admin' } }).select('-password');
+    res.json(users);
   } catch (error) {
     console.error('Error fetching users:', error);
     res.status(500).json({ message: 'Error fetching users.' });
   }
 });
 
-// --- 4. EXECUTE TRADE ---
-app.post('/api/trade/execute', async (req, res) => {
+// --- 4. ADMIN: UPDATE USER STATUS ---
+app.patch('/api/admin/users/:id/status', async (req, res) => {
   try {
-    const { userId, asset, amount, type } = req.body;
-    const user = await User.findById(userId);
+    const { status } = req.body;
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    ).select('-password');
 
     if (!user) return res.status(404).json({ message: 'User not found.' });
+    res.json({ message: 'Status updated successfully', user });
+  } catch (error) {
+    console.error('Status update error:', error);
+    res.status(500).json({ message: 'Error updating user status.' });
+  }
+});
 
-    if (user.balance < amount) {
-      return res.status(400).json({ message: 'Insufficient account balance.' });
+// --- 5. ADMIN: UPDATE INDIVIDUAL USER FIELD (initialDeposit, interest, total) ---
+app.patch('/api/admin/users/:id/fields', async (req, res) => {
+  try {
+    const { field, value } = req.body;
+    const allowedFields = ['initialDeposit', 'interest', 'total', 'name', 'phone'];
+    
+    if (!allowedFields.includes(field)) {
+      return res.status(400).json({ message: 'Invalid field update target.' });
     }
 
-    user.balance -= amount;
-    user.activeTrades += 1;
-    
-    const newTx = {
-      id: 'TX-' + Date.now(),
-      type: `${type} ${asset}`,
-      amount: amount,
-      date: new Date().toLocaleDateString(),
-      status: 'Completed'
-    };
-
-    user.transactions.unshift(newTx);
-    user.portfolio.equity = user.balance + amount;
-    user.portfolio.margin += amount;
-
-    await user.save();
-
-    res.json({
-      message: 'Trade executed successfully',
-      balance: user.balance,
-      portfolio: user.portfolio,
-      activeTrades: user.activeTrades,
-      transactions: user.transactions
-    });
-  } catch (error) {
-    console.error('Trade execution error:', error);
-    res.status(500).json({ message: 'Error executing trade.' });
-  }
-});
-
-// --- 5. ADMIN: APPROVE USER ---
-app.patch('/api/admin/users/:id/approve', async (req, res) => {
-  try {
     const user = await User.findByIdAndUpdate(
       req.params.id,
-      { status: 'approved' },
-      { new: true }
-    ).select('-password');
-
-    if (!user) return res.status(404).json({ message: 'User not found.' });
-    res.json({ message: 'User approved successfully', user });
-  } catch (error) {
-    console.error('Approval error:', error);
-    res.status(500).json({ message: 'Error approving user.' });
-  }
-});
-
-// --- 6. ADMIN: REJECT / LOCK USER ---
-app.patch('/api/admin/users/:id/reject', async (req, res) => {
-  try {
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { status: 'rejected' },
-      { new: true }
-    ).select('-password');
-
-    if (!user) return res.status(404).json({ message: 'User not found.' });
-    res.json({ message: 'User locked successfully', user });
-  } catch (error) {
-    console.error('Reject error:', error);
-    res.status(500).json({ message: 'Error locking user.' });
-  }
-});
-
-// --- 7. ADMIN: UPDATE USER FIGURES (Balance, Trades, Profit) ---
-app.patch('/api/admin/users/:id/update', async (req, res) => {
-  try {
-    const { balance, activeTrades, totalProfit } = req.body;
-
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { 
-        $set: { 
-          balance: Number(balance), 
-          activeTrades: Number(activeTrades), 
-          totalProfit: Number(totalProfit) 
-        } 
-      },
+      { [field]: value },
       { new: true, runValidators: true }
     ).select('-password');
 
     if (!user) return res.status(404).json({ message: 'User not found.' });
-
-    res.json({ message: 'User figures updated successfully', user });
+    res.json({ message: 'Field updated successfully', user });
   } catch (error) {
-    console.error('Update error:', error);
-    res.status(500).json({ message: 'Error updating user figures.' });
+    console.error('Field update error:', error);
+    res.status(500).json({ message: 'Error updating field.' });
+  }
+});
+
+// --- 6. GET POSITIONS FOR USER ---
+app.get('/api/positions', async (req, res) => {
+  try {
+    const { email } = req.query;
+    const query = email ? { email } : {};
+    const positions = await Position.find(query).sort({ createdAt: -1 });
+    res.json(positions);
+  } catch (error) {
+    console.error('Error fetching positions:', error);
+    res.status(500).json({ message: 'Error fetching positions.' });
+  }
+});
+
+// --- 7. EXECUTE TRADE ---
+app.post('/api/trades/execute', async (req, res) => {
+  try {
+    const { email, asset, type, amount } = req.body;
+    if (!email || !asset || !type || !amount) {
+      return res.status(400).json({ message: 'Missing trade execution parameters.' });
+    }
+
+    const entryPrices = {
+      'Bitcoin (BTC)': '$67,420.50',
+      'Ethereum (ETH)': '$3,610.80',
+      'EUR/USD': '1.0924'
+    };
+
+    const newPosition = new Position({
+      email,
+      asset,
+      type,
+      entry: entryPrices[asset] || '$100.00',
+      amount: String(amount),
+      pnl: '+$0.00',
+      status: 'Open'
+    });
+
+    await newPosition.save();
+    res.status(201).json({ message: 'Trade executed successfully', position: newPosition });
+  } catch (error) {
+    console.error('Trade execution error:', error);
+    res.status(500).json({ message: 'Error executing trade.' });
   }
 });
 
@@ -289,7 +282,7 @@ mongoose.connect(MONGO_URI)
     console.log('✅ Connected to MongoDB successfully');
     await createDefaultAdmin();
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
+      console.log(`🚀 Server running on port ${PORT}`);
     });
   })
   .catch((err) => {
