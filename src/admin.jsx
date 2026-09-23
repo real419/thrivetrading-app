@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 // Configure your backend server base URL here
-const API_URL = 'http://localhost:5000';
+const API_URL = 'https://thrivetrading-app.onrender.com';
 
 export default function App() {
   // Navigation & View States

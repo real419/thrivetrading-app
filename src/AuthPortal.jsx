@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 
+// Hardcoded production API URL to prevent Netlify/Vercel and mobile localhost connection failures
+const API_URL = 'https://thrivetrading-app.onrender.com';
+
 export default function AuthPortal({ initialMode = 'login', onLoginSuccess, onBackToHome }) {
   const [isLogin, setIsLogin] = useState(initialMode === 'login');
   const [email, setEmail] = useState('');
@@ -13,8 +16,8 @@ export default function AuthPortal({ initialMode = 'login', onLoginSuccess, onBa
     setLoading(true);
 
     try {
-      // Connects to your Express backend endpoints: /api/auth/login or /api/auth/signup
-      const endpoint = isLogin ? 'http://localhost:5000/api/auth/login' : 'http://localhost:5000/api/auth/signup';
+      // Connects to your live Express backend endpoints: /api/auth/login or /api/auth/signup
+      const endpoint = isLogin ? `${API_URL}/api/auth/login` : `${API_URL}/api/auth/signup`;
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

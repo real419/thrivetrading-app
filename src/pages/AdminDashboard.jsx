@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
-// Use environment variable for production deployment with localhost fallback
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// Hardcoded production API URL to prevent Netlify/Vercel build-time environment variable issues on mobile
+const API_URL = 'https://thrivetrading-app.onrender.com';
 
 export default function AdminDashboard({ userSession, onSignOut }) {
   const [clients, setClients] = useState([]);

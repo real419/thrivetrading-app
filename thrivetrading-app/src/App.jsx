@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 
-const API_BASE = 'http://localhost:5000/api';
+// Use environment variables for API base, falling back to localhost for local development
+const API_BASE = process.env.REACT_APP_API_URL 
+  ? `${process.env.REACT_APP_API_URL}/api` 
+  : 'http://localhost:5000/api';
 
 export default function App() {
   // Navigation & View States
